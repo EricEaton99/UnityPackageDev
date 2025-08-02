@@ -1,0 +1,34 @@
+{
+    "name": "IA_TestController",
+    "maps": [
+        {
+            "name": "controller",
+            "id": "7782bf5d-d603-418d-8529-be94ad45f224",
+            "actions": [
+                {
+                    "name": "openTypingMenu",
+                    "type": "Button",
+                    "id": "bc7a5cec-0965-4063-9f89-5c83ef691112",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "Press",
+                    "initialStateCheck": false
+                }
+            ],
+            "bindings": [
+                {
+                    "name": "",
+                    "id": "9de28de9-1bf1-43d3-8856-e465e8fdee94",
+                    "path": "<Gamepad>/leftShoulder",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "openTypingMenu",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                }
+            ]
+        }
+    ],
+    "controlSchemes": []
+}

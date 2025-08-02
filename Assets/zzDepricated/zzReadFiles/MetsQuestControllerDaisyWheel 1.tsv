@@ -1,0 +1,4 @@
+space|backspace|enter	abc	def	ghi	jkl	mno	pqr	stu	vwx	yz.
+tab|delete|enter	ABC	DEF	GHI	JKL	MNO	PQR	STU	VWX	YZ,
+space|backspace|enter	123	456	789	0	.,;	?!:	'"	()	[]
+tab|delete|enter	-+=	*/%	&^	@#	$_	~`	\|	{}	<>
