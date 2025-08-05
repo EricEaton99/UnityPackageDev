@@ -1,0 +1,73 @@
+cone3
+	triangle
+	circle
+	elipse
+	intersected hyperbola
+
+
+
+okay, we can use maths to generate the 3d crosssections of 4d shapes. If we were to have inputs for a functions (shape, rotation) then we could have the output be the faces of the object. In 4d, we could add an input (shape, rotation, crosssection) to get the faces of the 3d crosssection. 
+now, the computation for this in realtime is expensive, but it we precompute a bunch of outputs given inputs, then we could train an AI on the data to get a function that returns an array of the faces.
+Or maybe there is an easier way! If we already know the family of every crosssection based on the rotation of the 4d object and the crosssection, then we might find a simpler function to figure out where the faces are. 
+
+
+Rotation xyzw
+
+rx = rx
+ry = ry
+rz = 
+rw = 
+
+
+if you are animating a 4d object as it passes through the w axit plane and taking the 3d cross-section then rendering that 3d cross-section, you will get an animation of an object that contains all the information needed to reconstruct the 4d object. Let's assume for simplicity that the object has unit size so that it's width in the xyzw dimensions are all 1. 
+
+Now if we wish to view what that object looks like if we change it's position, then the xyz map directoy to its xyz and the w maps to the animation of it passing through the w plane. This means that a position of w < -1 should be invisible (since it has unit size) and a position of w > 1 should be invisible, but w in range -1 to 1 should corespond to the animation's 0 to 1 progress assuming the object is not rotated.
+
+For the animation, progress 0 is position w = -1 and progress 1 is position w = 1, so progress = 2w-1 where the line progress = f(position) passes through (0, -1), (1, 1)
+
+Now if we wish to view what the object looks like when rotated in 4d we can, instead of just setting the w-axis animation, play the w-axis animation and intersect a plane with the object, composing a shape from the intersected regions. 
+when we do this, how do the xyzw rotation map to the xy rotation of the plane and the xy movement of the plane as the animation plays.
+
+
+   /\
+  /  \
+ /    \
+/_----_\
+  ----
+
+
+1. define a hyperplane  n^ . (p`-c`) = 0
+	n^ = normal of plane = rotation/rot = (rx,ry,rz,rw)
+	c` = center of plane = position/pos = (px,py,pz,pw)
+	p` = point on plane
+2. let w in p` be the w position defined by the progress time
+	p` = (x,y,z,animW)
+3. solve for the xyz plane
+	n^ . (p`-c`) = 0
+	rot . (p` - pos) = 0
+	rx(x−px) + ry(y−py) + rz(z−pz) + rw(animW−pw)  =  0
+	rx*x + ry*y + rz*z  =  rx*px + ry*py + rz*pz + rw*pw − rw*animW
+		Let D =rx*px + ry*py + rz*pz + rw*pw − rw*animW	
+	rx*x + ry*y + rz*z  =  D
+
+but we need scalar equation of the plane in 3d 
+n^ . (p`-c`) = 0
+a(x-x0) + b(y-y0) + c(z-z0) = 0
+the vairables we have defined are rot and pos, and we will sample animW at intervals. from that we need to deduce the plane at each animW interval.
+
+
+
+if rx^2 + ry^2 + rz^2 = 0
+	if animW = pw 
+		//the entire object is the object at animW
+	else 
+		//there is no intersection
+
+c_3D  =  (px,py,pz) + rw(animW−pw) / (rx^2 + ry^2 + rz^2) * (rx,ry,rz)
+
+if |animW−pos.w| > ??? //0.5? 1? 
+	//there is no chance of intersection assuming unit dimensions
+else
+	//(rx,ry,rz) . ((x,y,z) - c_3D)  =  0
+	normal = rot;
+	pos = c_3D

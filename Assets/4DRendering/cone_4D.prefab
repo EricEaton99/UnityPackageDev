@@ -52,6 +52,18 @@ PrefabInstance:
       propertyPath: m_Name
       value: cone_4D
       objectReference: {fileID: 0}
+    - target: {fileID: 8879528566716807029, guid: d72634a9fc3901f44b94fd031c284860, type: 3}
+      propertyPath: m_LocalScale.x
+      value: 40.200005
+      objectReference: {fileID: 0}
+    - target: {fileID: 8879528566716807029, guid: d72634a9fc3901f44b94fd031c284860, type: 3}
+      propertyPath: m_LocalScale.y
+      value: 40.200005
+      objectReference: {fileID: 0}
+    - target: {fileID: 8879528566716807029, guid: d72634a9fc3901f44b94fd031c284860, type: 3}
+      propertyPath: m_LocalScale.z
+      value: 40.200005
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []

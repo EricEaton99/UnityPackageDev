@@ -7,6 +7,7 @@ using EzySlice;
 using static UnityEngine.GraphicsBuffer;
 using System;
 using Unity.VisualScripting;
+using UnityEditor.Experimental.GraphView;
 
 public class ObjectGenerator4D : MonoBehaviour
 {
@@ -16,7 +17,7 @@ public class ObjectGenerator4D : MonoBehaviour
     [SerializeField] Transform slicePlaneDebug;
     [SerializeField] GameObject animatedModelPrefab;
     [SerializeField] GameObject zzTempGarbageModelPrefab;
-    [SerializeField] float timeInSeconds;
+    [SerializeField][Range(0f, 0.3f)] float angularReductionThreshold, distanceReductionThreshold;
     [SerializeField] int numSlices;
 
 
@@ -39,13 +40,26 @@ public class ObjectGenerator4D : MonoBehaviour
 
     #region runtime
 
+    public void ResetObject()
+    {
+        ClearSliceInstances();
+        zzTempClearBallInstances();
+    }
+
+    public void MakeObject()
+    {
+        DrawObjectAsVerts();
+
+        GameObject instance = MakeObject(animatedModelPrefab, slicePlaneDebug, numSlices);
+        sliceInstances.Add(instance);
+    }
+
     private void Awake()
     {
         slicePlanePrevPosition = slicePlaneDebug.localPosition;
         slicePlanePrevRotation = slicePlaneDebug.rotation;
 
-        _InspectorButtonReset();
-        DrawObjectAsVerts();
+        ResetObject();
         MakeObject();
     }
 
@@ -54,8 +68,7 @@ public class ObjectGenerator4D : MonoBehaviour
         if (slicePlaneDebug.localPosition != slicePlanePrevPosition || 
             slicePlaneDebug.rotation != slicePlanePrevRotation)
         {
-            _InspectorButtonReset();
-            DrawObjectAsVerts();
+            ResetObject();
             MakeObject();
         }
         slicePlanePrevPosition = slicePlaneDebug.localPosition;
@@ -97,31 +110,34 @@ public class ObjectGenerator4D : MonoBehaviour
 
     public void _InspectorButtonAction()
     {
-        Debug.Log("_InspectorButtonAction: Slice");
+        Debug.Log("_InspectorButtonAction");
 
-        _InspectorButtonReset();
+
+        ResetObject();
+
+        Transform4D tf4D = GetComponent<Transform4D>();
+        Mesh mesh = Mesh4DSliceGenerator.Get3DPartOfObject(animatedModelPrefab, tf4D, numSlices);
+
+        GameObject instance = Instantiate(zzTempGarbageModelPrefab);
+        //ring.GetComponent<MeshFilter>().sharedMesh.Clear();
+        mesh.RecalculateNormals();
+        mesh.RecalculateTangents();
+
+        instance.GetComponent<MeshFilter>().sharedMesh = mesh;
+        sliceInstances.Add(instance);
+
+
+        //ResetObject();
         //DrawObjectAsVerts();
-        MakeObject();
+        //MakeObject();
+
     }
 
-    public void _InspectorButtonReset()
-    {
-
-        ClearSliceInstances();
-        zzTempClearBallInstances();
-    }
 
     #endregion
 
     #region visualization
 
-    private void MakeObject()
-    {
-        GameObject instance = MakeObject(animatedModelPrefab, slicePlaneDebug, numSlices);
-        //if (instance == null) return;
-        //instance.GetComponent<MeshRenderer>().material = zzTempBallMat[0];
-        sliceInstances.Add(instance);
-    }
 
     private void DrawObjectAsVerts()
     {
@@ -133,13 +149,6 @@ public class ObjectGenerator4D : MonoBehaviour
             zzTempPutBallsAtVerts(ring);
         }
     }
-
-    private void DrawObjectAsSlices()
-    {
-        _InspectorButtonReset();
-        sliceInstances = GetSlices(animatedModelPrefab, slicePlaneDebug, numSlices);
-    }
-
 
     private void zzTempPutBallsAtVerts(List<Vector3> verts)
     {
@@ -204,85 +213,36 @@ public class ObjectGenerator4D : MonoBehaviour
         return bakedMesh;
     }
 
+    private GameObject MakePlaneAtFrame(Vector4 eulerRotation, Vector4 position, float animW)
+    {
+        Vector4 r = eulerRotation;
+        Vector4 p = position;
+        Vector3 r3 = new Vector3(r.x,r.y,r.z);
+        Vector3 p3 = new Vector3(p.x, p.y, p.z);
 
-    private void AddTopTri(int topStart, int bottomStart, List<int> tris)
-    {
-        tris.Add(topStart);
-        tris.Add(bottomStart);
-        tris.Add(topStart + 1);
-    }
-    private void AddBottomTri(int topStart, int bottomStart, List<int> tris)
-    {
-        tris.Add(bottomStart);
-        tris.Add(bottomStart + 1);
-        tris.Add(topStart);
-    }
-    private void AddTri(int v1, int v2, int v3, List<int> tris)
-    {
-        tris.Add(v1);
-        tris.Add(v2);
-        tris.Add(v3);
-    }
+        float MagSqrNormal_3D = r.x * r.x + r.y * r.y + r.z * r.z;
 
-    private void CloseConnectingRing(Vector3[] rings, int r1Start, int r2Start, int r1Index, int r2Index, List<int> tris)
-    {
-        float topDist = Vector3.Distance(rings[r1Start], rings[r2Index]);
-        float bottomDist = Vector3.Distance(rings[r2Start], rings[r1Index]);
-
-        if (topDist < bottomDist)
+        if (r.x * r.x + r.y * r.y + r.z * r.z == 0)
         {
-            AddTri(r1Index, r2Index, r1Start, tris);
-            AddTri(r2Index, r2Start, r1Start, tris);
-        }
-        else
-        {
-            AddTri(r2Index, r2Start, r1Index, tris);
-            AddTri(r1Index, r2Start, r1Start, tris);
-        }
-    }
-    private List<int> GetTrisConnectingRings(Vector3[] rings, int r1Start, int r2Start, int r2End, List<int> tris)
-    {
-        //assume ring2 verts are sequentially after ring1 verts. so ring1[ring1.Length] == ring2[0]
-        int r1Index = r1Start;
-        int r2Index = r2Start;
-
-        float topDist, bottomDist;
-
-        while (r1Index < r2Start - 1 && r2Index < r2End - 1)
-        {
-            topDist = Vector3.Distance(rings[r1Index + 1], rings[r2Index]);
-            bottomDist = Vector3.Distance(rings[r2Index + 1], rings[r1Index]);
-
-            if (topDist < bottomDist) AddTopTri(r1Index++, r2Index, tris);
-            else AddBottomTri(r1Index, r2Index++, tris);
-        }
-
-        //finish tri fan
-        while (r1Index < r2Start - 1) AddTopTri(r1Index++, r2Index, tris);
-        while (r2Index < r2End - 1) AddBottomTri(r1Index, r2Index++, tris);
-
-        //close remaining gap
-        CloseConnectingRing(rings, r1Start, r2Start, r1Index, r2Index, tris);
-
-        return tris;
-    }
-
-    private void GetRingTriFan(int ringStart, int ringEnd, List<int> tris, bool flip)
-    {
-        //assume ring2 verts are sequentially after ring1 verts. so ring1[ring1.Length] == ring2[0]
-        
-        for (int i = ringStart+1; i < ringEnd-1; i++)
-        {
-            if (flip)
+            if (animW == p.w)
             {
-                AddTri(ringStart, i, i + 1, tris);
+                //the entire object is the object at animW
+                return null;
+
             }
             else
             {
-                AddTri(i, ringStart, i + 1, tris);
+                //there is no intersection
+                return null;
             }
         }
-        Debug.Log($"{ringEnd - ringStart} verts, {ringEnd - 2 - (ringStart+1)} tri fan");
+        else {
+            Vector3 c_3D = p3  +  (r.w * (animW - p.w) / MagSqrNormal_3D) * r3;
+            GameObject plane = new GameObject();
+            plane.transform.rotation = Quaternion.Euler(r3);
+            plane.transform.position = c_3D;
+            return plane;
+        }
     }
 
     private List<int> GetTrisConnectingRingsSkewed(Vector3[] ring1, Vector3[] ring2, int startIndex)
@@ -382,13 +342,41 @@ public class ObjectGenerator4D : MonoBehaviour
         return tris;
     }
 
+    private void RemoveInsignificantVerts(List<Vector3> verts)
+    {
+        //perform a traversal of the list and remove all verts that have an angle of less than threshold
+
+        int i = 1;
+
+        while(i < verts.Count - 1)
+        {
+            if (Vector3.Distance(verts[i - 1], verts[i]) < distanceReductionThreshold)
+            {
+                verts.RemoveAt(i);
+                continue;
+            }
+
+            //Vector3 entryDirection = verts[i - 1] - verts[i];
+            //Vector3 exitDirection = verts[i] - verts[i + 1];
+            //if (Vector3.Dot(entryDirection.normalized, exitDirection.normalized) < 1 - angularReductionThreshold)
+            //{
+            //    verts.RemoveAt(i);
+            //    continue;
+            //}
+            i++;
+        }
+    }
+
     private GameObject MakeObject(GameObject animatedModelPrefab, Transform slicePlane, int numSlices)
     {
         List<List<Vector3>> verts = GetObjectVerts(animatedModelPrefab, slicePlane, numSlices); 
 
+        Debug.Log($"number of rings = {verts.Count}");
+
         //NOTE numRings may not equal numSlices!
         int numRings = verts.Count;
         if (numRings < 2) return null;
+        
 
         //make array of each ring's starting index and find the final index
         int[] ringStarts = new int[numRings];
@@ -409,21 +397,21 @@ public class ObjectGenerator4D : MonoBehaviour
         List<int> tris = new List<int>();
         for (int i = 0; i < numRings - 2; i++)
         {
-            GetTrisConnectingRings(vertsArray, ringStarts[i], ringStarts[i + 1], ringStarts[i + 2], tris);
+            MeshTools.GetTrisConnectingRings(vertsArray, ringStarts[i], ringStarts[i + 1], ringStarts[i + 2], tris);
         }
-        GetTrisConnectingRings(vertsArray, ringStarts[numRings-2], ringStarts[numRings-1], ringEnd, tris);
+        MeshTools.GetTrisConnectingRings(vertsArray, ringStarts[numRings-2], ringStarts[numRings-1], ringEnd, tris);
 
         //add end-cap tris to tris list
-        GetRingTriFan(ringStarts[numRings - 1], ringEnd, tris, false);
-        GetRingTriFan(ringStarts[0], ringStarts[1], tris, true);
+        MeshTools.GetRingTriFan(ringStarts[numRings - 1], ringEnd, tris, false);
+        //GetRingTriFan(ringStarts[0], ringStarts[1], tris, true);
 
         //convert tris array to list
         int[] trisArray = tris.ToArray();
 
         GameObject ring = Instantiate(zzTempGarbageModelPrefab);
         //ring.GetComponent<MeshFilter>().sharedMesh.Clear();
-        ring.GetComponent<MeshFilter>().sharedMesh.triangles = trisArray;
         ring.GetComponent<MeshFilter>().sharedMesh.vertices = vertsArray;
+        ring.GetComponent<MeshFilter>().sharedMesh.triangles = trisArray;
         ring.GetComponent<MeshFilter>().sharedMesh.RecalculateNormals();
         ring.GetComponent<MeshFilter>().sharedMesh.RecalculateTangents();
 
@@ -434,29 +422,6 @@ public class ObjectGenerator4D : MonoBehaviour
 
     #region slices and verts
 
-    public List<GameObject> GetSlices(GameObject animatedModelPrefab, Transform slicePlane, int numSlices)
-    {
-        List<GameObject> slices = new List<GameObject>();
-
-
-        for (int i = 0; i < numSlices; i++)
-        {
-            float sliceProgress = i / (float)(numSlices - 0.99);
-
-            Mesh mesh = MakeMeshAtFrame(animatedModelPrefab, sliceProgress);
-
-            GameObject slice = GetObjectSlice(mesh, slicePlane);
-            if (slice == null) continue;
-
-            slice.name = $"slice {sliceProgress}";
-            slice.GetComponent<Transform>().localPosition = new Vector3(0, sliceProgress, 0);
-
-            slice.GetComponent<MeshRenderer>().material = zzTempMat;
-
-            slices.Add(slice);
-        }
-        return slices;
-    }
 
     public GameObject GetObjectSlice(Mesh sharedMesh, Transform slicePlane)    //GameObject targetObject
     {
@@ -475,44 +440,62 @@ public class ObjectGenerator4D : MonoBehaviour
         if (mesh.subMeshCount < 2) return null;
         upperHull.GetComponent<MeshFilter>().sharedMesh.triangles = mesh.GetTriangles(1);
 
-        //List<Vector3> sliceVerts = new List<Vector3>();
-        //upperHull.GetComponent<MeshFilter>().sharedMesh.GetVertices(sliceVerts);
-        //zzTempPutBallsAtVerts(sliceVerts);
-        //zzTempMakeBallRings(mesh, upperHull.GetComponent<MeshFilter>().sharedMesh.triangles);
-
         return upperHull;
     }
 
+    public List<Vector3> GetSliceVerts(Mesh sharedMesh, Transform slicePlane)
+    {
+        GameObject slice = GetObjectSlice(sharedMesh, slicePlane);
 
+        if (slice == null)
+        {
+            DestroyImmediate(slice);
+            return null;
+        }
+
+        Mesh mesh = slice.GetComponent<MeshFilter>().sharedMesh;
+        DestroyImmediate(slice);
+
+        if (mesh == null) return null;
+        return GetVertsRing(mesh, mesh.triangles);
+    }
     public List<List<Vector3>> GetObjectVerts(GameObject animatedModelPrefab, Transform slicePlane, int numSlices)
+    {
+        return GetObjectVerts(animatedModelPrefab, slicePlane, numSlices, 0.01f, 0.99f);
+    }
+
+
+    public List<List<Vector3>> GetObjectVerts(GameObject animatedModelPrefab, Transform slicePlane, int numSlices, float sliceStart, float sliceEnd)
     {
         List<List<Vector3>> slices = new List<List<Vector3>>();
 
+        float step = (sliceEnd - sliceStart) / (numSlices - 1);
+
         for (int i = 0; i < numSlices; i++)
         {
-            float sliceProgress = i / (float)(numSlices - 0.99);
+            float sliceProgress = sliceStart + i * step;
 
             Mesh mesh = MakeMeshAtFrame(animatedModelPrefab, sliceProgress);
 
             List<Vector3> sliceVerts = GetSliceVerts(mesh, slicePlane);
-            if (sliceVerts == null) continue;
+            if (sliceVerts == null)
+            {
+                int finalNumSlices = 4;
+                if (numSlices == finalNumSlices || i <= 0) break;
+                List<List<Vector3>> finalSlices = GetObjectVerts(animatedModelPrefab, slicePlane, finalNumSlices, sliceProgress - step * (finalNumSlices - 1) / finalNumSlices, sliceProgress);
+                slices.AddRange(finalSlices);
+                break;
+            }
 
-            OffsetVerts(sliceVerts, Vector3.up * sliceProgress);
+            RemoveInsignificantVerts(sliceVerts);
+
+            OffsetVerts(sliceVerts, slicePlane.up * sliceProgress);
             //slice.GetComponent<Transform>().localPosition = new Vector3(0, sliceProgress, 0);
             slices.Add(sliceVerts);
         }
         return slices;
     }
 
-    public List<Vector3> GetSliceVerts(Mesh sharedMesh, Transform slicePlane)
-    {
-        GameObject slice = GetObjectSlice(sharedMesh, slicePlane);
-        if (slice == null) return null;
-        Mesh mesh = slice.GetComponent<MeshFilter>().sharedMesh;
-        DestroyImmediate(slice);
-        if (mesh == null) return null;
-        return GetVertsRing(mesh, mesh.triangles);
-    }
     private List<Vector3> GetVertsRing(Mesh mesh, int[] sliceTriangles)
     {
         List<Vector3> verts = new List<Vector3>();
@@ -528,10 +511,13 @@ public class ObjectGenerator4D : MonoBehaviour
 
     #endregion
 
-
-
-
 }
+
+
+
+
+
+
 
 
 
@@ -553,7 +539,7 @@ public class ObjectGenerator4DEditor : Editor
         }
         if (GUILayout.Button("Inspector Reset"))
         {
-            menu._InspectorButtonReset();
+            menu.ResetObject();
         }
     }
 }
