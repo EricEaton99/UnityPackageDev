@@ -21,7 +21,11 @@ public class MeshExtractionTools : MonoBehaviour
         GameObject upperHull = hull.CreateUpperHull();
 
         Mesh mesh = upperHull.GetComponent<MeshFilter>().sharedMesh;
-        if (mesh.subMeshCount < 2) return null;
+        if (mesh.subMeshCount < 2)
+        {
+            DestroyImmediate(upperHull);
+            return null;
+        }
         upperHull.GetComponent<MeshFilter>().sharedMesh.triangles = mesh.GetTriangles(1);
 
         return upperHull;

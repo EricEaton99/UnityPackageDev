@@ -13,6 +13,31 @@ public class zzTempTestMesh4D : MonoBehaviour
     List<GameObject> testGameObjectHolder = new List<GameObject>();
 
 
+    Vector4 slicePlanePrevPosition;
+    Vector4 slicePlanePrevRotation;
+
+    private void Awake()
+    {
+        slicePlanePrevPosition = GetComponent<Transform4D>().GetPosition4D();
+        slicePlanePrevRotation = GetComponent<Transform4D>().GetRotation4D();
+
+        ResetCallback();
+        TestCallback();
+    }
+
+    private void Update()
+    {
+        if (slicePlanePrevPosition != GetComponent<Transform4D>().GetPosition4D() ||
+            slicePlanePrevRotation != GetComponent<Transform4D>().GetRotation4D())
+        {
+            Debug.Log("Test Mesh Update");
+            ResetCallback();
+            TestCallback();
+        }
+        slicePlanePrevPosition = GetComponent<Transform4D>().GetPosition4D();
+        slicePlanePrevRotation = GetComponent<Transform4D>().GetRotation4D();
+    }
+
 
     public void TestCallback()
     {
@@ -22,7 +47,7 @@ public class zzTempTestMesh4D : MonoBehaviour
         ResetCallback();
 
         Transform4D tf4D = GetComponent<Transform4D>();
-        Mesh mesh = Mesh4DSliceGenerator.Get3DPartOfObject(animatedModelPrefab, tf4D, numSlices);
+        Mesh mesh = Mesh4DSliceGenerator.Get3DSliceOf4DObject(animatedModelPrefab, tf4D, numSlices);
 
         if (mesh == null) return;
 

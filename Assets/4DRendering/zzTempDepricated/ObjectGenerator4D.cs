@@ -116,7 +116,7 @@ public class ObjectGenerator4D : MonoBehaviour
         ResetObject();
 
         Transform4D tf4D = GetComponent<Transform4D>();
-        Mesh mesh = Mesh4DSliceGenerator.Get3DPartOfObject(animatedModelPrefab, tf4D, numSlices);
+        Mesh mesh = Mesh4DSliceGenerator.Get3DSliceOf4DObject(animatedModelPrefab, tf4D, numSlices);
 
         GameObject instance = Instantiate(zzTempGarbageModelPrefab);
         //ring.GetComponent<MeshFilter>().sharedMesh.Clear();
@@ -245,102 +245,6 @@ public class ObjectGenerator4D : MonoBehaviour
         }
     }
 
-    private List<int> GetTrisConnectingRingsSkewed(Vector3[] ring1, Vector3[] ring2, int startIndex)
-    {
-        Debug.Log($"first indicies are:\n" +
-            $"{ring1[0]}, {ring1[1]}, {ring1[2]}, {ring1[3]}\n" +
-            $"{ring2[0]}, {ring2[1]}, {ring2[2]}, {ring2[3]}\n" +
-            $"");
-
-
-        List<int> tris = new List<int>();
-
-        int minLen = Mathf.Min(ring1.Length, ring2.Length);
-        int maxLen = Mathf.Max(ring1.Length, ring2.Length);
-
-        for (int i = startIndex; i < minLen + startIndex; i++)
-        {
-            //make 2 tris for each vert
-            //assume ring2 verts are sequentially after ring1 verts. so ring1[ring1.Length] == ring2[0]
-
-            //top tri is 
-            tris.Add(i);
-            tris.Add(i + 1);
-            tris.Add(i + ring1.Length);
-
-            //bottom tri is
-            tris.Add(i + ring1.Length);
-            tris.Add(i + 1);
-            tris.Add(i + ring1.Length + 1);
-
-            int j = 6 * (i - startIndex);
-            Debug.Log($"tri pair {i}, {i + ring1.Length}:\n" +
-                $"{tris[j + 0]}, {tris[j + 1]}, {tris[j + 2]}\n" +
-                $"{tris[j + 3]}, {tris[j + 4]}, {tris[j + 5]}\n" +
-                $"");
-        }
-
-        //for (int i = startIndex; i < minLen + startIndex; i++)
-        //{
-        //    //make 2 tris for each vert
-        //    AddTopTri(i, i + ring1.Length, tris);
-        //    AddBottomTri(i + 1, i + ring1.Length, tris);
-
-        //    //int j = 6 * (i - startIndex);
-        //    //Debug.Log($"tri pair {i}, {i + ring1.Length}:\n" +
-        //    //    $"{tris[j + 0]}, {tris[j + 1]}, {tris[j + 2]}\n" +
-        //    //    $"{tris[j + 3]}, {tris[j + 4]}, {tris[j + 5]}\n" +
-        //    //    $"");
-        //}
-
-
-        /*
-         * from 0-min
-         * from min to max but only on the max side
-         */
-        tris[tris.Count - 1] = 0;
-
-        tris.Add(ring1.Length + ring2.Length - 2);
-        tris.Add(0);
-        tris.Add(ring1.Length);
-        //tris[tris.Count - 2] = ring1.Length;
-
-        return tris;
-
-
-        //complete the rest as a fan
-        if (ring1.Length > ring2.Length)
-        {
-            for (int i = ring2.Length + startIndex; i < ring1.Length + startIndex; i++)
-            {
-                //top tri only
-                tris.Add(i);
-                tris.Add(i + 1);
-                tris.Add(ring1.Length);     //all verts in these tris are in a fan connected to ring2[0] since ring1.Len > ring2.Len
-
-                int j = (3 * minLen) + (3 * i);
-                Debug.Log($"r1 tri {i}:\n" +
-                    $"{tris[j + 0]}, {tris[j + 1]}, {tris[j + 2]}\n");
-            }
-        }
-        else
-        {
-            for (int i = minLen + startIndex; i < maxLen + startIndex; i++)
-            {
-                //bottom tri only
-                tris.Add(ring1.Length);
-                tris.Add(i + 1);
-                tris.Add(i + ring1.Length + 1);
-
-                int j = (3 * minLen) + (3 * i);
-                Debug.Log($"r2 tri {i}:\n" +
-                    $"{tris[j + 0]}, {tris[j + 1]}, {tris[j + 2]}\n");
-            }
-        }
-
-
-        return tris;
-    }
 
     private void RemoveInsignificantVerts(List<Vector3> verts)
     {

@@ -96,6 +96,31 @@ public static class MeshTools
     }
 
 
+    public static void RemoveInsignificantVerts(List<Vector3> verts, float distanceReductionThreshold, float angularReductionThreshold)
+    {
+
+        int i = 1;
+
+        while (i < verts.Count - 1)
+        {
+            if (Vector3.Distance(verts[i - 1], verts[i]) < distanceReductionThreshold)
+            {
+                verts.RemoveAt(i);
+                continue;
+            }
+
+            Vector3 entryDirection = verts[i - 1] - verts[i];
+            Vector3 exitDirection = verts[i] - verts[i + 1];
+            if (Vector3.Dot(entryDirection.normalized, exitDirection.normalized) > 1 - angularReductionThreshold)
+            {
+                verts.RemoveAt(i);
+                continue;
+            }
+            i++;
+        }
+    }
+
+
     public static List<Vector3> GetVertsRing(Mesh mesh, int[] sliceTriangles)
     {
         List<Vector3> verts = new List<Vector3>();
